@@ -40,14 +40,14 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
-@app.route('/motd/list')
+@app.route('/motd')
 @login_required
 def motd():
     cur = conn.cursor()
     cur.execute("SELECT * FROM notices")
     notices = cur.fetchall()
     cur.close()
-    return jsonify(notices)
+    return render_template('motd.html', notices=notices)
 
 restart_command = "pm2 restart jacr-bot"
 @app.route("/restart")
