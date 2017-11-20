@@ -5,7 +5,10 @@ import psycopg2
 import subprocess
 
 app = Flask(__name__)
-app.config.from_object("config.DevelopmentConfig")
+
+configName = (os.environ.get("PROD") == None) and "config.DevelopmentConfig" or "config.ProductionConfig"
+
+app.config.from_object(configName)
 
 conn = psycopg2.connect(app.config['DATABASE_URI'])
 
