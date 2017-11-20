@@ -53,6 +53,21 @@ def motd():
     cur.close()
     return render_template('motd.html', notices=notices)
 
+@app.route('/responses')
+@login_required
+def responses():
+    cur = conn.cursor()
+    cur.execute("""SELECT array_to_json(array_agg(cmds.name)) as cmds, array_to_json(groups.messages) as messages FROM
+			response_commands as cmds,
+			response_groups as groups
+		WHERE
+			cmds.group = groups.id
+		GROUP BY groups.messages""")
+    responses = cur.fetchall()
+    cur.close()
+    return render_template('responses.html', responses=responses)
+
+
 restart_command = "pm2 restart jacr-bot"
 @app.route("/restart")
 @login_required
