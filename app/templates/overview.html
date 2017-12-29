@@ -1,5 +1,13 @@
 {% extends "dashboard.html" %}
 {% block content %}
   <h1>Overview</h1>
-  Welcome to the new admin dashboard for JACR.
+  <p>
+    Welcome to the new admin dashboard for JACR.
+  </p>
+
+  <form class="form-inline" method="POST" action="/restart">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+    <button type="submit" class="btn btn-primary">Restart bot</button>
+  </form>
 {% endblock %}

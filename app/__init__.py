@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, redirect, url_for, jsonify, abort
+from flask import Flask, render_template, request, redirect, url_for, redirect, url_for, jsonify, abort, flash
 from flask_login import LoginManager, login_required, current_user, login_user, UserMixin, logout_user
 from flask_wtf.csrf import CSRFProtect
 import psycopg2
@@ -82,15 +82,15 @@ def bot_restart():
     try:
         process = subprocess.Popen(restart_command.split(), stdout=subprocess.PIPE)
         output, error = process.communicate()
+        if error is not None:
+            flash("pm2 had an issue. Tell @qaisjp.", "error")
+
     except KeyboardInterrupt:
         raise
     except:
-        return "Tell @qaisjp that something bad happened."
+        flash("Tell @qaisjp that something bad happened.", "error")
 
-    if error is None:
-        return redirect(url_for('overview'))
-
-    return "pm2 had an issue. Tell @qaisjp."
+    return redirect(url_for('overview'))
 
 class User(UserMixin):
     def get_id(self):

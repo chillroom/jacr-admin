@@ -61,14 +61,27 @@
                     </li>
                 </ul>
 
-                <ul class="nav nav-pills flex-column">
+                <!-- <ul class="nav nav-pills flex-column">
                     <li class="nav-item">
                         <a class="nav-link" href="/restart">Restart bot</a>
                     </li>
-                </ul>
+                </ul> -->
             </nav>
 
             <main role="main" class="col-sm-9 ml-sm-auto col-md-10 pt-3">
+                {% with errors = get_flashed_messages(category_filter=["error"]) %}
+                    {% if errors %}
+                        {% for msg in errors %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ msg }}
+
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        {% endfor -%}
+                    {% endif %}
+                {% endwith %}
                 {% block content %}{% endblock %}
             </main>
         </div>
