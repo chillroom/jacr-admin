@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, redirect, url_for, jsonify, abort
 from flask_login import LoginManager, login_required, current_user, login_user, UserMixin, logout_user
+from flask_wtf.csrf import CSRFProtect
 import psycopg2
 import subprocess
 import os
@@ -16,6 +17,8 @@ conn = psycopg2.connect(app.config['DATABASE_URI'])
 
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
+
+csrf = CSRFProtect(app)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -42,7 +45,7 @@ def login():
 @app.route("/logout")
 def logout():
     logout_user()
-    return redirect(url_for('index'))
+    return redirect(url_for('overview'))
 
 @app.route('/notices')
 @login_required
@@ -73,7 +76,7 @@ def responses():
 
 
 restart_command = "pm2 restart jacr-bot"
-@app.route("/restart")
+@app.route("/restart", methods=["POST"])
 @login_required
 def bot_restart():
     try:
@@ -83,9 +86,9 @@ def bot_restart():
         raise
     except:
         return "Tell @qaisjp that something bad happened."
-    
-    if error == None:
-        return "What a success!"
+
+    if error is None:
+        return redirect(url_for('overview'))
 
     return "pm2 had an issue. Tell @qaisjp."
 
