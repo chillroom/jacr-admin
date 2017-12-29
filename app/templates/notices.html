@@ -20,6 +20,9 @@
             <th>Body</th>
         </thead>
         <tbody>
+            <tr class="jacr-click" data-toggle="modal" data-target="#noticeModal">
+                <td colspan="2">Create new notice</td>
+            </tr>
             {% for notice in notices %}
             <tr class="jacr-click" data-notice-id="{{ notice[0] }}" data-notice-title="{{ notice[2] }}" data-notice-body="{{ notice[1] }}" data-toggle="modal" data-target="#noticeModal">
                 <td>{{ notice[2] }}</td>
@@ -33,14 +36,18 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="noticeModalLabel">Notice: <span></span></h5>
+                    <h5 class="modal-title" id="noticeModalLabel"></h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
-                    <form>
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div id='notice-error' class="alert alert-danger" style="display: none;" role="alert">
+                        {{ msg }}
+                    </div>
+                    <form id="notice-form">
+                        <input type="hidden" id="csrf_token" value="{{ csrf_token() }}"/>
+                        <input type="hidden" id='notice-id' />
 
                         <div class="form-group">
                             <label for="notice-title" class="col-form-label">Title:</label>
@@ -64,36 +71,124 @@
 {% block script %}
     {{ super() }}
     <script>
-        $('#noticeModal').on('show.bs.modal', function (event) {
+        $('#noticeModal').on('show.bs.modal', function(event) {
             const button = $(event.relatedTarget); // Button that triggered the modal
             const id = button.data('notice-id'); // Extract info from data-* attributes
-            const title = button.data('notice-title');
+            let title = button.data('notice-title');
             const body = button.data('notice-body');
 
-            var modal = $(this)
+            const modal = $(this);
 
-            modal.find('.modal-title > span').text(title)
-            modal.find('#notice-title').val(title)
-            modal.find('#notice-body').val(body)
-        })
+            const err = modal.find('#notice-error');
+            err.hide();
+            err.text("");
 
-        // $.ajax({
-        //     url: '/notices/0',
-        //     type: 'POST',
-        //     xhrFields: {
-        //         withCredentials: true
-        //     },
-        //     data: {
-        //         title: 'drop table notices;',
-        //         body: 'boday',
-        //         "csrf_token": "blahh"
-        //     },
-        //     success: function(result) {
-        //         console.log('succ', result);
-        //     },
-        //     error: function(result) {
-        //         console.log('error', result);
-        //     }
-        // });
+            if (id === undefined) {
+                title = "New notice";
+                modal.find('#notice-delete').hide();
+                modal.find('#notice-title').val("");
+            } else {
+                modal.find('#notice-delete').show();
+                modal.find('#notice-title').val(title);
+            }
+            modal.find("#notice-id").val(id);
+            modal.find('.modal-title').text(title);
+            modal.find('#notice-body').val(body);
+        });
+
+        $("#notice-delete").click(function(event) {
+            const form = $('#notice-form');
+            const btn = $("#notice-delete,#notice-save");
+            
+            btn.prop("disabled", true);
+
+            const id = form.find('#notice-id').val();
+            const csrf = form.find('#csrf_token').val();
+
+            $.ajax({
+                url: '/notices/' + id,
+                type: 'DELETE',
+                xhrFields: {
+                    withCredentials: true
+                },
+                data: { "csrf_token": csrf },
+                success: function(result) {
+                    btn.prop("disabled", false);
+                    $('tr[data-notice-id=' + id + ']').remove();
+                    $('#noticeModal').modal('hide');
+                },
+                error: function(result) {
+                    btn.prop("disabled", false);
+
+                    var message = "Unknown error. Please refresh page and try again.";
+                    if (result.status == 400) {
+                        message = result.responseJSON.message;
+                    }
+
+                    const err = $('#notice-error');
+                    err.show();
+                    err.text(message);
+                }
+            });
+        });
+
+        $("#notice-save").click(function(event) {
+            const modal = $('#noticeModal');
+            const form = modal.find('#notice-form');
+            const btn = form.find("#notice-delete,#notice-save");
+            
+            btn.prop("disabled", true);
+
+            const id = form.find('#notice-id').val();
+
+            const title = form.find('#notice-title').val();
+            const body = form.find('#notice-body').val();
+            const csrf = form.find('#csrf_token').val();
+
+            $.ajax({
+                url: '/notices' + (id === "" ? "" : "/") + id,
+                type: 'PUT',
+                xhrFields: {
+                    withCredentials: true
+                },
+                data: {
+                    title: title,
+                    body: body,
+                    "csrf_token": csrf
+                },
+                success: function(result) {
+                    if (id === "") {
+                        location.reload();
+                        return;
+                    }
+
+                    btn.prop("disabled", false);
+
+                    const row = $('tr[data-notice-id=' + id + ']');
+                    row.data('notice-title', title);
+                    row.data('notice-body', body);
+                    
+                    const children = row.children();
+                    $(children[0]).text(title);
+                    $(children[1]).text(body);
+
+                    $('#noticeModal').modal('hide');
+                },
+                error: function(result) {
+                    btn.prop("disabled", false);
+
+                    var message = "Unknown error. Please refresh page and try again.";
+                    if (result.status == 400) {
+                        message = result.responseJSON.message;
+                    }
+
+                    const err = $('#notice-error');
+                    err.show();
+                    err.text(message);
+                }
+            });
+        });
+
+        
     </script>
 {% endblock %}

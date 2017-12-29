@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, redirect, url_for, jsonify, abort, flash
+from flask import Flask, render_template, request, redirect, url_for, redirect, url_for, jsonify, abort, flash, g
 from flask_login import LoginManager, login_required, current_user, login_user, UserMixin, logout_user
 from flask_wtf.csrf import CSRFProtect
 import psycopg2
@@ -12,13 +12,20 @@ configName = (os.environ.get("PROD") == None) and "config.DevelopmentConfig" or 
 
 app.config.from_object(configName)
 
-conn = psycopg2.connect(app.config['DATABASE_URI'])
-
+def get_db():
+    if not hasattr(g, 'db'):
+        g.db = psycopg2.connect(app.config['DATABASE_URI'])
+    return g.db
 
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
 csrf = CSRFProtect(app)
+
+@app.teardown_appcontext
+def close_db(error):
+    if hasattr(g, 'db'):
+        g.db.close()
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -50,8 +57,8 @@ def logout():
 @app.route('/notices')
 @login_required
 def notices():
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM notices")
+    cur = get_db().cursor()
+    cur.execute("SELECT * FROM notices ORDER BY title ASC")
     rows = cur.fetchall()
     cur.close()
     return render_template('notices.html', notices=rows)
@@ -60,33 +67,58 @@ def notices():
 @app.route('/notices/<int:id>', methods=['DELETE', 'PUT'])
 @login_required
 def notices_update(id=None):
-    cur = conn.cursor()
+    cur = get_db().cursor()
     status = "success"
     code = 200
+    message = ""
+    data = None
 
-    if request.method == "PUT" and id is None:
-        # Insert a row
-        try:
+    try:
+        if request.method == "PUT" and id is None:
+            # Insert a row
             cur.execute(
                 """INSERT INTO notices(title, message) VALUES (%s, %s) RETURNING id""",
                 (request.form["title"], request.form["body"])
             )
             rows = cur.fetchall()
-            print(rows)
-        except psycopg2.IntegrityError:
-            status = "error"
-            code = 400
+            data = {'id': rows[0][0]}
+        elif request.method == "PUT":
+            cur.execute(
+                """update notices set (title, message) = (%s, %s) where id=%s""",
+                (request.form['title'], request.form['body'], id)
+            )
 
+            if cur.rowcount < 1:
+                status = "error"
+                message = "Notice does not exist. Try creating a new one."
+                code = 400
+        elif request.method == "DELETE":
+            cur.execute(
+                """delete from notices where id = %s""",
+                (id,)
+            )
 
+            if cur.rowcount < 1:
+                status = "error"
+                message = "Notice does not exist or already deleted."
+                code = 400
+    except psycopg2.IntegrityError:
+        status = "error"
+        message = "A notice with that title already exists."
+        code = 400
+
+    get_db().commit()
     cur.close()
     return jsonify({
+        "data": data,
+        "message": message,
         "status": status
     }), code
 
 @app.route('/responses')
 @login_required
 def responses():
-    cur = conn.cursor()
+    cur = get_db().cursor()
     cur.execute("""SELECT array_to_json(array_agg(cmds.name)) as cmds, array_to_json(groups.messages) as messages FROM
 			response_commands as cmds,
 			response_groups as groups
