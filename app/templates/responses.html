@@ -1,43 +1,45 @@
-{% extends "layout.html" %}
-{% block body %}
-  {{ super() }}
-  <div class="container" style="padding-top: 70px; margin-top:0;display:flex; justify-content: center; ">
-    <div style="width: 55%">
-      <div class="card blue-grey darken-1">
-        <div class="card-content white-text" style="padding-bottom: 0px">
-          <span class="card-title">Responses</span>
-        </div>
-        <div class="card-action">
-          <a href="/" class="waves-effect waves-light btn">Go back</a>
-        </div>
-      </div>
+{% extends "dashboard.html" %}
+{% block content %}
+<h1>Responses</h1>
 
-      <table>
-        <thead>
-          <th>Commands</th>
-          <th>Responses</th>
-        </thead>
-        <tbody>
-          {% for response in responses %}
-            <tr>
-              <td>
+<p>
+    Each row represents a <em>response</em>, which is composed of a <em>command</em> and a <em>body</em>.
+</p>
+<p>
+    The cells in the <strong>Commands</strong> columns are the names of the commands that trigger the <em>response</em> of the corresponding row. So a response containing both
+    "hello" and "world" in the "command" column would be executed by <code>!hello</code> or <code>!world</code>.
+</p>
+<p>
+    Similarly, the cells in the <strong>Responses</strong> column is the text printed to the chat when the <em>response</em> of the corresponding row is triggered.
+    So a response containing both <code>Hello, world!</code> and <code>Howdy!</code> would be randomly selected when the corresponding commands are triggered.
+</p>
+
+<table class="table table-hover table-striped">
+    <thead>
+        <tr>
+            <th scope="col">Commands</th>
+            <th scope="col">Responses</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for response in responses %}
+        <tr>
+            <td>
                 <ul>
-                  {% for cmd in response[0] %}
+                    {% for cmd in response[0] %}
                     <li>{{ cmd }}</li>
-                  {% endfor %}
+                    {% endfor %}
                 </ul>
-              </td>
-              <td>
+            </td>
+            <td>
                 <ul>
-                  {% for body in response[1] %}
+                    {% for body in response[1] %}
                     <li>{{ body }}</li>
-                  {% endfor %}
+                    {% endfor %}
                 </ul>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock %}

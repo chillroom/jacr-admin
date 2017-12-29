@@ -1,0 +1,76 @@
+{% extends "layout.html" %}
+{% block body %}
+    {{ super() }}
+
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <a class="navbar-brand" href="#">chillroom</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="http://just-a-chill-room.net">Home</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="/">Dashboard <span class="sr-only">(current)</span></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="https://dubtrack.fm/join/just-a-chill-room">Dubtrack</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-sm-3 col-md-2 d-none d-sm-block bg-light sidebar">
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item">
+                        <a
+                            class="nav-link {% if request.url_rule.endpoint == 'overview' %}active{% endif %}"
+                            href="/"
+                        >
+                            Overview
+                            {% if request.url_rule.endpoint == 'overview' %}<span class="sr-only">(current)</span>{% endif %}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a
+                            class="nav-link {% if request.url_rule.endpoint == 'notices' %}active{% endif %}"
+                            href="/notices"
+                        >
+                            Notices
+                            {% if request.url_rule.endpoint == 'notices' %}<span class="sr-only">(current)</span>{% endif %}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a
+                            class="nav-link {% if request.url_rule.endpoint == 'responses' %}active{% endif %}"
+                            href="/responses"
+                        >
+                            Responses
+                            {% if request.url_rule.endpoint == 'responses' %}<span class="sr-only">(current)</span>{% endif %}
+                        </a>
+                    </li>
+                </ul>
+
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/restart">Restart bot</a>
+                    </li>
+                </ul>
+            </nav>
+
+            <main role="main" class="col-sm-9 ml-sm-auto col-md-10 pt-3">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+{% endblock %}

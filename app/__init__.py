@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, redirect, url_for, jsonify, abort
 from flask_login import LoginManager, login_required, current_user, login_user, UserMixin, logout_user
 import psycopg2
 import subprocess
@@ -23,8 +23,8 @@ def load_user(user_id):
 
 @app.route('/')
 @login_required
-def index():
-    return render_template('index.html')
+def overview(page="overview"):
+    return render_template('overview.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -34,7 +34,7 @@ def login():
     result = "Unrecognised IP address and password."
     if app.config['ACCESS_PASSWORD'] == request.form['password']:
         login_user(User())
-        return redirect(url_for('index'))
+        return redirect(url_for('overview'))
 
     return render_template('login.html', error = result)
 
@@ -44,14 +44,14 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
-@app.route('/motd')
+@app.route('/notices')
 @login_required
-def motd():
+def notices():
     cur = conn.cursor()
     cur.execute("SELECT * FROM notices")
-    notices = cur.fetchall()
+    rows = cur.fetchall()
     cur.close()
-    return render_template('motd.html', notices=notices)
+    return render_template('notices.html', notices=rows)
 
 @app.route('/responses')
 @login_required
@@ -63,9 +63,13 @@ def responses():
 		WHERE
 			cmds.group = groups.id
 		GROUP BY groups.messages""")
-    responses = cur.fetchall()
+
+    rows = cur.fetchall()
     cur.close()
-    return render_template('responses.html', responses=responses)
+    return render_template(
+        'responses.html',
+        responses=rows
+    )
 
 
 restart_command = "pm2 restart jacr-bot"

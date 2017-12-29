@@ -1,0 +1,27 @@
+{% extends "dashboard.html" %}
+{% block content %}
+    <h1>Notices</h1>
+    <p>
+        Notices are what you consider "messages of the day".
+    </p>
+    <p>
+        The <code>title</code> of each of these notices bear no meaning, and only exist to make notices easier to modify via the chat bot.
+    </p>
+    <p>
+        <strong>Note</strong>: after changing data here or via the bot, please reload the configuration by running the reload command: <code>!motd reload</code>
+    </p>
+    <table class="table table-striped table-hover">
+        <thead>
+            <th>Name</th>
+            <th>Body</th>
+        </thead>
+        <tbody>
+            {% for notice in notices %}
+            <tr>
+                <td>{{ notice[2] }}</td>
+                <td>{{ notice[1] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
