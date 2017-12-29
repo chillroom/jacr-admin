@@ -56,6 +56,33 @@ def notices():
     cur.close()
     return render_template('notices.html', notices=rows)
 
+@app.route('/notices', methods=['PUT'])
+@app.route('/notices/<int:id>', methods=['DELETE', 'PUT'])
+@login_required
+def notices_update(id=None):
+    cur = conn.cursor()
+    status = "success"
+    code = 200
+
+    if request.method == "PUT" and id is None:
+        # Insert a row
+        try:
+            cur.execute(
+                """INSERT INTO notices(title, message) VALUES (%s, %s) RETURNING id""",
+                (request.form["title"], request.form["body"])
+            )
+            rows = cur.fetchall()
+            print(rows)
+        except psycopg2.IntegrityError:
+            status = "error"
+            code = 400
+
+
+    cur.close()
+    return jsonify({
+        "status": status
+    }), code
+
 @app.route('/responses')
 @login_required
 def responses():
@@ -82,7 +109,9 @@ def bot_restart():
     try:
         process = subprocess.Popen(restart_command.split(), stdout=subprocess.PIPE)
         output, error = process.communicate()
-        if error is not None:
+        if error is None:
+            flash("A bot restart has been requested.", "info")
+        else:
             flash("pm2 had an issue. Tell @qaisjp.", "error")
 
     except KeyboardInterrupt:

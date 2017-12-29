@@ -5,23 +5,95 @@
         Notices are what you consider "messages of the day".
     </p>
     <p>
-        The <code>title</code> of each of these notices bear no meaning, and only exist to make notices easier to modify via the chat bot.
+        The <code>title</code> of each of these notices bear no meaning, and only exist to make notices easier to modify via the chat bot. It's also a good
+        way to summarise the notice for anyone else moderating chillroom.
     </p>
     <p>
         <strong>Note</strong>: after changing data here or via the bot, please reload the configuration by running the reload command: <code>!motd reload</code>
     </p>
+    <p>
+        <strong>How to add, edit, or remove</strong>: click on the row you want to modify!
+    </p>
     <table class="table table-striped table-hover">
         <thead>
-            <th>Name</th>
+            <th>Title</th>
             <th>Body</th>
         </thead>
         <tbody>
             {% for notice in notices %}
-            <tr>
+            <tr class="jacr-click" data-notice-id="{{ notice[0] }}" data-notice-title="{{ notice[2] }}" data-notice-body="{{ notice[1] }}" data-toggle="modal" data-target="#noticeModal">
                 <td>{{ notice[2] }}</td>
                 <td>{{ notice[1] }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <div class="modal fade" id="noticeModal" tabindex="-1" role="dialog" aria-labelledby="noticeModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="noticeModalLabel">Notice: <span></span></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                        <div class="form-group">
+                            <label for="notice-title" class="col-form-label">Title:</label>
+                            <input type="text" class="form-control" id="notice-title">
+                        </div>
+                        <div class="form-group">
+                            <label for="notice-body" class="col-form-label">Body:</label>
+                            <textarea class="form-control" id="notice-body"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button id="notice-delete" type="button" class="btn btn-danger">Delete</button>
+                    <button id="notice-save" type="button" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    {{ super() }}
+    <script>
+        $('#noticeModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget); // Button that triggered the modal
+            const id = button.data('notice-id'); // Extract info from data-* attributes
+            const title = button.data('notice-title');
+            const body = button.data('notice-body');
+
+            var modal = $(this)
+
+            modal.find('.modal-title > span').text(title)
+            modal.find('#notice-title').val(title)
+            modal.find('#notice-body').val(body)
+        })
+
+        // $.ajax({
+        //     url: '/notices/0',
+        //     type: 'POST',
+        //     xhrFields: {
+        //         withCredentials: true
+        //     },
+        //     data: {
+        //         title: 'drop table notices;',
+        //         body: 'boday',
+        //         "csrf_token": "blahh"
+        //     },
+        //     success: function(result) {
+        //         console.log('succ', result);
+        //     },
+        //     error: function(result) {
+        //         console.log('error', result);
+        //     }
+        // });
+    </script>
 {% endblock %}
