@@ -119,12 +119,12 @@ def notices_update(id=None):
 @login_required
 def responses():
     cur = get_db().cursor()
-    cur.execute("""SELECT array_to_json(array_agg(cmds.name)) as cmds, array_to_json(groups.messages) as messages FROM
+    cur.execute("""SELECT groups.id as group_id, array_to_json(array_agg(cmds.name)) as cmds, array_to_json(groups.messages) as messages FROM
 			response_commands as cmds,
 			response_groups as groups
 		WHERE
 			cmds.group = groups.id
-		GROUP BY groups.messages""")
+		GROUP BY groups.messages, groups.id""")
 
     rows = cur.fetchall()
     cur.close()

@@ -25,17 +25,17 @@
     </thead>
     <tbody>
         {% for response in responses %}
-        <tr>
+        <tr class="jacr-click" data-group-id="{{ response[0] }}">
             <td>
                 <ul>
-                    {% for cmd in response[0] %}
+                    {% for cmd in response[1] %}
                     <li>{{ cmd }}</li>
                     {% endfor %}
                 </ul>
             </td>
             <td>
                 <ul>
-                    {% for body in response[1] %}
+                    {% for body in response[2] %}
                     <li>{{ body }}</li>
                     {% endfor %}
                 </ul>
