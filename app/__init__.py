@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, redirect, 
 from flask_login import LoginManager, login_required, current_user, login_user, UserMixin, logout_user
 from flask_wtf.csrf import CSRFProtect
 import psycopg2
+import psycopg2.extras
 import subprocess
 import os
 
@@ -133,6 +134,85 @@ def responses():
         responses=rows
     )
 
+@app.route('/responses/groups', methods=['PUT'])
+@app.route('/responses/groups/<int:id>', methods=['DELETE', 'GET'])
+@login_required
+def responses_group(id=None):
+    cur = get_db().cursor()
+    status = "success"
+    code = 200
+    message = ""
+    data = None
+
+    if request.method == "PUT":
+        messages = request.form.getlist('messages[]')
+        created = request.form.getlist('created[]')
+        dropped = request.form.getlist('dropped[]')
+
+        if id is None:
+            # Creating a group if id is none
+            cur.execute(
+                """insert into response_groups(messages) VALUES (%s) returning id""",
+                (messages,)
+            )
+
+            id = cur.fetchall()[0][0]
+        else:
+            cur.execute(
+                """update response_groups set messages = %s where id=%s""",
+                (messages, id)
+            )
+
+            if cur.rowcount < 1:
+                status = "error"
+                message = "Notice does not exist. Try creating a new one."
+                code = 400
+
+        if status != "error":
+            try:
+                psycopg2.extras.execute_values(
+                    cur, """insert into response_commands("group", name) values %s""",
+                    list(map(lambda cmd: (id, cmd), created))
+                )
+            except psycopg2.IntegrityError as ex:
+                # Here it's likely a command already exists, so let's try and determine which command.
+                # Do some primitive collection because I'm lazy.
+                cmd = (str(ex).splitlines()[1].split(' ')[3].split('=')[1][1:-1])
+                status = "error"
+                message = "Command '{}' already exists.".format(cmd)
+                code = 400
+
+    elif request.method == "DELETE":
+        cur.execute(
+            """delete from response_groups where id = %s""",
+            (id,)
+        )
+
+        if cur.rowcount < 1:
+            status = "error"
+            message = "Group does not exist or already deleted."
+            code = 400
+    elif request.method == "GET":
+        cur.execute("""SELECT name FROM response_commands WHERE "group" = %s""", (id,))
+        cmds = cur.fetchall()
+
+        cur.execute("""SELECT messages FROM response_groups WHERE id = %s""", (id,))
+        messages = cur.fetchall()
+
+        data = {
+            'cmds': cmds,
+            'messages': messages,
+        }
+
+    if status == "success":
+        get_db().commit()
+
+    cur.close()
+    return jsonify({
+        "data": data,
+        "message": message,
+        "status": status
+    }), code
 
 restart_command = "pm2 restart jacr-bot"
 @app.route("/restart", methods=["POST"])

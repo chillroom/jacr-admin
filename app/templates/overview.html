@@ -5,9 +5,12 @@
     Welcome to the new admin dashboard for JACR.
   </p>
 
-  <form class="form-inline" method="POST" action="/restart">
+  <form class="form-inline d-inline" method="POST" action="/restart">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
-    <button type="submit" class="btn btn-primary">Restart bot</button>
+    <button type="submit" class="btn btn-primary mb-1">Restart bot</button>
   </form>
+
+  <a href="/notices" class="btn btn-primary mb-1">Manage notices</a>
+  <a href="/responses" class="btn btn-primary mb-1">Manage responses</a>
 {% endblock %}

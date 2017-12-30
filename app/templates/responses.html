@@ -8,11 +8,11 @@
     Each row represents a <em>response</em>, which is composed of a <em>command</em> and a <em>body</em>.
 </p>
 <p>
-    The cells in the <strong>Commands</strong> columns are the names of the commands that trigger the <em>response</em> of the corresponding row. So a response containing both
+    The cells in the <strong>Commands</strong> column are the names of the commands that trigger the <em>response</em> of the corresponding row. So a response containing both
     "hello" and "world" in the "command" column would be executed by <code>!hello</code> or <code>!world</code>.
 </p>
 <p>
-    Similarly, the cells in the <strong>Responses</strong> column is the text printed to the chat when the <em>response</em> of the corresponding row is triggered.
+    Similarly, the cells in the <strong>Messages</strong> column is the text printed to the chat when the <em>response</em> of the corresponding row is triggered.
     So a response containing both <code>Hello, world!</code> and <code>Howdy!</code> would be randomly selected when the corresponding commands are triggered.
 </p>
 
@@ -20,12 +20,18 @@
     <thead>
         <tr>
             <th scope="col">Commands</th>
-            <th scope="col">Responses</th>
+            <th scope="col">Messages</th>
         </tr>
     </thead>
     <tbody>
+        <tr class="jacr-click" data-toggle="modal" data-target="#respModal">
+            <td colspan="2">Create a new response</td>
+        </tr>
         {% for response in responses %}
-        <tr class="jacr-click" data-group-id="{{ response[0] }}">
+        <tr class="jacr-click"
+            data-group-id="{{ response[0] }}"
+            data-toggle="modal" data-target="#respModal"
+        >
             <td>
                 <ul>
                     {% for cmd in response[1] %}
@@ -44,4 +50,317 @@
         {% endfor %}
     </tbody>
 </table>
+
+<div class="modal fade" id="respModal" tabindex="-1" role="dialog" aria-labelledby="respModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="respModalLabel"></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id='resp-error' class="alert alert-danger" style="display: none;" role="alert">
+                    {{ msg }}
+                </div>
+                <p>
+                    <small>Use ctrl or shift to select multiple items.</small>
+                    <br>
+                    <small>Ctrl-clicking will allow you to deselect an item.</small>
+                </p>
+                <form id="resp-form">
+                    <input type="hidden" id="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" id='resp-group-id' />
+
+                    <div class="form-group">
+                        <label for="resp-cmds" class="col-form-label">Commands</label>
+                        <select class="form-control custom-select" id="resp-cmds" multiple>
+
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="resp-new-cmd" class="col-form-label sr-only">New command</label>
+                        <input type="text" class="form-control" id="resp-new-cmd" placeholder="New command">
+                    </div>
+                    <button id="resp-add-cmd" type="button" class="btn btn-secondary">Add command</button>
+                    <button id="resp-delete-cmd" type="button" class="btn btn-danger">Delete selected</button>
+                    <hr>
+                    <div class="form-group">
+                        <label for="resp-msgs" class="col-form-label">Messages</label>
+                        <select class="form-control custom-select" id="resp-msgs" multiple>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="resp-new-msg" class="col-form-label sr-only">New message</label>
+                        <textarea class="form-control" id="resp-new-msg" placeholder="New message"></textarea>
+                    </div>
+                    <button id="resp-add-msg" type="button" class="btn btn-secondary">Add message</button>
+                    <button id="resp-delete-msg" type="button" class="btn btn-danger">Delete selected</button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="resp-delete-all" type="button" class="btn btn-danger">Delete everything</button>
+                <button id="resp-clear-progress" type="button" class="btn btn-secondary">Clear progress</button>
+                <button id="resp-save" type="button" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+    {{ super() }}
+    <script>
+        $('#respModal').on('show.bs.modal', function(event) {
+            const button = $(event.relatedTarget); // Button that triggered the modal
+            const groupID = button.data('group-id'); // Extract info from data-* attributes
+            
+            const modal = $(this);
+
+            if (groupID === undefined) {
+                title = "New response";
+                modal.find('#resp-delete-all').hide();
+                modal.find('#resp-clear-progress').show();
+                modal.find('#resp-title').val("");
+            } else {
+                title = "Modify response"
+                modal.find('#resp-delete-all').show();
+                modal.find('#resp-clear-progress').hide();
+            }
+            modal.find("#resp-group-id").val(groupID);
+            modal.find('.modal-title').text(title);
+            // modal.find('#resp-body').val(body);
+        });
+
+        $('#resp-form').submit(function(event) {
+            event.preventDefault();
+        });
+
+        function showError(text) {
+            const err = $('#resp-error');
+            location.href = '#resp-error';
+            err.show();
+            err.text(text);
+        }
+
+        $("#resp-delete").click(function(event) {
+            const form = $('#resp-form');
+            const btn = $("#resp-delete,#resp-save");
+            
+            btn.prop("disabled", true);
+
+            const groupID = form.find('#resp-group-id').val();
+            const csrf = form.find('#csrf_token').val();
+
+            $.ajax({
+                url: '/responses/group/' + groupID,
+                type: 'DELETE',
+                xhrFields: {
+                    withCredentials: true
+                },
+                data: { "csrf_token": csrf },
+                success: function(result) {
+                    btn.prop("disabled", false);
+                    $('tr[data-group-id=' + groupID + ']').remove();
+                    $('#respModal').modal('hide');
+                },
+                error: function(result) {
+                    btn.prop("disabled", false);
+
+                    var message = "Unknown error. Please refresh page and try again.";
+                    if (result.status == 400) {
+                        message = result.responseJSON.message;
+                    }
+
+                    showError(message);
+                }
+            });
+        });
+
+        $('#resp-clear-progress').click(function(event) {
+            const modal = $('#respModal');
+            const form = modal.find('#resp-form');
+
+            // Clear error
+            const err = modal.find('#resp-error');
+            err.hide();
+            err.text("");
+
+            // Clear options
+            form.find('#resp-cmds,#resp-msgs').children().remove();
+            
+            // Clear inputs
+            form.find('#resp-new-cmd,#resp-new-msg').val('');
+
+            // Clear inputs
+            form.find()
+        })
+
+        $("#resp-save").click(function(event) {
+            const modal = $('#respModal');
+            const form = modal.find('#resp-form');
+            const btn = form.find("#resp-delete,#resp-save");
+            
+            btn.prop("disabled", true);
+
+            const groupID = form.find('#resp-group-id').val();
+
+            const title = form.find('#resp-title').val();
+            const messages = $('#resp-msgs > option').map((_, e) => e.text).toArray();
+            const created = $('#resp-cmds > option')
+                .filter((_, e) => !e.hidden && $(e).data('cmd-id') === undefined)
+                .map((_, e) => e.text)
+                .toArray();
+            const dropped = $('#resp-cmds > option')
+                .filter((_, e) => e.hidden && $(e).data('cmd-id') !== undefined)
+                .map((_, e) => $(e).data('cmd-id'))
+                .toArray();
+            const csrf = form.find('#csrf_token').val();
+
+            if ($('#resp-cmds > option').length === 0) {
+                showError("There must be at least one command.")
+                return
+            }
+            if ($('#resp-msgs > option').length === 0) {
+                showError("There must be at least one message.")
+                return
+            }
+
+            $.ajax({
+                url: '/responses/groups' + (groupID === "" ? "" : "/") + groupID,
+                type: 'PUT',
+                xhrFields: {
+                    withCredentials: true
+                },
+                data: {
+                    created: created,
+                    dropped: dropped,
+                    messages: messages,
+                    "csrf_token": csrf
+                },
+                success: function(result) {
+                    location.reload();
+                    // if (id === "") {
+                    //     location.reload();
+                    //     return;
+                    // }
+
+                    btn.prop("disabled", false);
+
+                    // const row = $('tr[data-resp-id=' + id + ']');
+                    // row.data('resp-title', title);
+                    // row.data('resp-body', body);
+                    
+                    // const children = row.children();
+                    // $(children[0]).text(title);
+                    // $(children[1]).text(body);
+
+                    // $('#respModal').modal('hide');
+                },
+                error: function(result) {
+                    console.log(result)
+                    btn.prop("disabled", false);
+
+                    var message = "Unknown error. Please refresh page and try again.";
+                    if (result.status == 400) {
+                        message = result.responseJSON.message;
+                    }
+
+                    const err = $('#resp-error');
+                    location.href = '#resp-error';
+                    err.show();
+                    err.text(message);
+                }
+            });
+        });
+
+        $('#resp-add-cmd').click(function(event) {
+            const modal = $('#respModal');
+            const edit = modal.find('#resp-new-cmd');
+            const list = modal.find('#resp-cmds');
+            
+            let cmdText = edit.val();
+            if (cmdText.startsWith('!')) {
+                cmdText = cmdText.slice(1);
+            }
+            edit.val("");
+
+            if (cmdText === "") {
+                return;
+            }
+
+            var abort = false;
+            list.children().each((_, opt) => {
+                // Turn a hidden item (newly removed item) into an unhidden one
+                if (opt.hidden && opt.text === cmdText) {
+                    opt.hidden = false;
+                }
+
+                // If a command already exists, don't add a new one.
+                if (opt.text === cmdText) {
+                    abort = true;
+                }
+            })
+
+            if (abort) {
+                return;
+            }
+
+            list.append($('<option>', {text: cmdText}));
+        });
+
+        $('#resp-delete-cmd').click(function(event) {
+            const modal = $('#respModal');
+            const edit = modal.find('#resp-new-cmd');
+            const list = modal.find('#resp-cmds');
+            const selected = modal.find(':selected');
+            console.log(selected);
+            selected.each((_, opt) => {
+                var opt = $(opt);
+                if (opt.data('cmd-id') !== undefined) {
+                    opt.prop('hidden', true);
+                } else {
+                    $(opt).remove();
+                }
+                console.log(opt);
+            })
+        })
+
+        $('#resp-add-msg').click(function(event) {
+            const modal = $('#respModal');
+            const edit = modal.find('#resp-new-msg');
+            const list = modal.find('#resp-msgs');
+            
+            const msgText = edit.val();
+            if (msgText === "") {
+                return;
+            }
+            edit.val('');
+
+            var abort = false;
+            list.children().each((_, opt) => {
+                // If a message already exists, don't add a new one.
+                if (opt.text === msgText) {
+                    abort = true;
+                }
+            })
+
+            if (abort) {
+                return;
+            }
+
+            list.append($('<option>', {text: msgText}));
+        });
+
+        $('#resp-delete-msg').click(function(event) {
+            const modal = $('#respModal');
+            const list = modal.find('#resp-msgs');
+            const selected = modal.find(':selected');
+
+            selected.each((_, opt) => {
+                $(opt).remove();
+            })
+        })
+    </script>
 {% endblock %}

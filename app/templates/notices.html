@@ -21,7 +21,7 @@
     </thead>
     <tbody>
         <tr class="jacr-click" data-toggle="modal" data-target="#noticeModal">
-            <td colspan="2">Create new notice</td>
+            <td colspan="2">Create a new notice</td>
         </tr>
         {% for notice in notices %}
         <tr class="jacr-click" data-notice-id="{{ notice[0] }}" data-notice-title="{{ notice[2] }}" data-notice-body="{{ notice[1] }}" data-toggle="modal" data-target="#noticeModal">
@@ -94,6 +94,10 @@
             modal.find("#notice-id").val(id);
             modal.find('.modal-title').text(title);
             modal.find('#notice-body').val(body);
+        });
+
+        $('#notice-form').submit(function(event) {
+            event.preventDefault();
         });
 
         $("#notice-delete").click(function(event) {
