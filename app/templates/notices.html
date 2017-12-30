@@ -124,7 +124,7 @@
                 error: function(result) {
                     btn.prop("disabled", false);
 
-                    var message = "Unknown error. Please refresh page and try again.";
+                    var message = "Unknown error. Please refresh the page and try again.";
                     if (result.status == 400) {
                         message = result.responseJSON.message;
                     }
@@ -181,7 +181,7 @@
                 error: function(result) {
                     btn.prop("disabled", false);
 
-                    var message = "Unknown error. Please refresh page and try again.";
+                    var message = "Unknown error. Please refresh the page and try again.";
                     if (result.status == 400) {
                         message = result.responseJSON.message;
                     }

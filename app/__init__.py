@@ -135,7 +135,7 @@ def responses():
     )
 
 @app.route('/responses/groups', methods=['PUT'])
-@app.route('/responses/groups/<int:id>', methods=['DELETE', 'GET'])
+@app.route('/responses/groups/<int:id>', methods=['DELETE', 'PUT', 'GET'])
 @login_required
 def responses_group(id=None):
     cur = get_db().cursor()
@@ -182,6 +182,10 @@ def responses_group(id=None):
                 message = "Command '{}' already exists.".format(cmd)
                 code = 400
 
+            # TODO: evaluate this
+            # also: this has to be last, otherwise the cleaner will delete the group
+            for cmd in dropped:
+                cur.execute("delete from response_commands where id = %s", (int(cmd),))
     elif request.method == "DELETE":
         cur.execute(
             """delete from response_groups where id = %s""",
@@ -193,15 +197,18 @@ def responses_group(id=None):
             message = "Group does not exist or already deleted."
             code = 400
     elif request.method == "GET":
-        cur.execute("""SELECT name FROM response_commands WHERE "group" = %s""", (id,))
+        cur.execute("""SELECT id, name FROM response_commands WHERE "group" = %s""", (id,))
         cmds = cur.fetchall()
 
         cur.execute("""SELECT messages FROM response_groups WHERE id = %s""", (id,))
-        messages = cur.fetchall()
+        msgs = cur.fetchall()
+
+        if len(msgs) > 0:
+            msgs = msgs[0][0]
 
         data = {
-            'cmds': cmds,
-            'messages': messages,
+            'commands': cmds,
+            'messages': msgs,
         }
 
     if status == "success":

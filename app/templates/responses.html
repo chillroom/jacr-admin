@@ -109,21 +109,68 @@
 {% block script %}
     {{ super() }}
     <script>
+        function setModifyDisabled(disabled) {
+            $('#resp-delete-cmd').attr('disabled', disabled);
+            $('#resp-add-cmd').attr('disabled', disabled);
+            $('#resp-delete-msg').attr('disabled', disabled);
+            $('#resp-add-msg').attr('disabled', disabled);
+            $('#resp-save').attr('disabled', disabled);
+        }
+
         $('#respModal').on('show.bs.modal', function(event) {
             const button = $(event.relatedTarget); // Button that triggered the modal
             const groupID = button.data('group-id'); // Extract info from data-* attributes
             
             const modal = $(this);
 
+            $('#resp-clear-progress').trigger('click');
+
             if (groupID === undefined) {
                 title = "New response";
                 modal.find('#resp-delete-all').hide();
                 modal.find('#resp-clear-progress').show();
                 modal.find('#resp-title').val("");
+
+                setModifyDisabled(false);
             } else {
                 title = "Modify response"
                 modal.find('#resp-delete-all').show();
                 modal.find('#resp-clear-progress').hide();
+
+                setModifyDisabled(true);
+
+                $.ajax({
+                    url: '/responses/groups/' + groupID,
+                    type: 'GET',
+                    xhrFields: {
+                        withCredentials: true
+                    },
+                    success: function(result) {
+                        const cmdList = $('#resp-cmds');
+                        result.data.commands.forEach(cmd => {
+                            cmdList.append($('<option>', {
+                                'data-cmd-id': cmd[0],
+                                text: cmd[1]
+                            }));
+                        });
+
+
+                        const msgList = $('#resp-msgs');
+                        result.data.messages.forEach(msg => {
+                            msgList.append($('<option>', {text: msg}));
+                        });
+
+                        setModifyDisabled(false);
+                    },
+                    error: function(result) {
+                        var message = "Unknown error. Please refresh the page and try again.";
+                        if (result.status == 400) {
+                            message = result.responseJSON.message;
+                        }
+
+                        showError(message);
+                    }
+                });
             }
             modal.find("#resp-group-id").val(groupID);
             modal.find('.modal-title').text(title);
@@ -140,10 +187,16 @@
             err.show();
             err.text(text);
         }
+        
+        function hideError() {
+            const err = $('#resp-error');
+            err.hide();
+            err.text("");
+        }
 
-        $("#resp-delete").click(function(event) {
+        $("#resp-delete-all").click(function(event) {
             const form = $('#resp-form');
-            const btn = $("#resp-delete,#resp-save");
+            const btn = $("#resp-delete-all,#resp-save");
             
             btn.prop("disabled", true);
 
@@ -151,7 +204,7 @@
             const csrf = form.find('#csrf_token').val();
 
             $.ajax({
-                url: '/responses/group/' + groupID,
+                url: '/responses/groups/' + groupID,
                 type: 'DELETE',
                 xhrFields: {
                     withCredentials: true
@@ -165,7 +218,7 @@
                 error: function(result) {
                     btn.prop("disabled", false);
 
-                    var message = "Unknown error. Please refresh page and try again.";
+                    var message = "Unknown error. Please refresh the page and try again.";
                     if (result.status == 400) {
                         message = result.responseJSON.message;
                     }
@@ -180,9 +233,7 @@
             const form = modal.find('#resp-form');
 
             // Clear error
-            const err = modal.find('#resp-error');
-            err.hide();
-            err.text("");
+            hideError();
 
             // Clear options
             form.find('#resp-cmds,#resp-msgs').children().remove();
@@ -190,14 +241,15 @@
             // Clear inputs
             form.find('#resp-new-cmd,#resp-new-msg').val('');
 
-            // Clear inputs
-            form.find()
+            // Reset button states
+            form.find('#resp-delete-all,#resp-clear-progress,#resp-save').attr('disabled', false)
+            setModifyDisabled(false);
         })
 
         $("#resp-save").click(function(event) {
             const modal = $('#respModal');
             const form = modal.find('#resp-form');
-            const btn = form.find("#resp-delete,#resp-save");
+            const btn = form.find("#resp-delete-all,#resp-clear-progress,#resp-save");
             
             btn.prop("disabled", true);
 
@@ -238,28 +290,11 @@
                 },
                 success: function(result) {
                     location.reload();
-                    // if (id === "") {
-                    //     location.reload();
-                    //     return;
-                    // }
-
-                    btn.prop("disabled", false);
-
-                    // const row = $('tr[data-resp-id=' + id + ']');
-                    // row.data('resp-title', title);
-                    // row.data('resp-body', body);
-                    
-                    // const children = row.children();
-                    // $(children[0]).text(title);
-                    // $(children[1]).text(body);
-
-                    // $('#respModal').modal('hide');
                 },
                 error: function(result) {
-                    console.log(result)
                     btn.prop("disabled", false);
 
-                    var message = "Unknown error. Please refresh page and try again.";
+                    var message = "Unknown error. Please refresh the page and try again.";
                     if (result.status == 400) {
                         message = result.responseJSON.message;
                     }
@@ -281,11 +316,17 @@
             if (cmdText.startsWith('!')) {
                 cmdText = cmdText.slice(1);
             }
-            edit.val("");
 
             if (cmdText === "") {
                 return;
             }
+
+            if (cmdText.length > 32) {
+                showError('Command is too long. It should be at most 32 characters.')
+                return;
+            }
+            
+            edit.val("");
 
             var abort = false;
             list.children().each((_, opt) => {
@@ -312,7 +353,7 @@
             const edit = modal.find('#resp-new-cmd');
             const list = modal.find('#resp-cmds');
             const selected = modal.find(':selected');
-            console.log(selected);
+
             selected.each((_, opt) => {
                 var opt = $(opt);
                 if (opt.data('cmd-id') !== undefined) {
@@ -320,7 +361,6 @@
                 } else {
                     $(opt).remove();
                 }
-                console.log(opt);
             })
         })
 
